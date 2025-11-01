@@ -61,7 +61,12 @@ branches:
         # Require branches to be up to date before merging
         strict: true
         # Status checks that must pass
-        contexts: []
+        # Update the list below to match your CI workflow status check names (e.g., from GitHub Actions).
+        # Example: 'build', 'test', 'lint'
+        contexts:
+          - build
+          - test
+          - lint
 
       # Enforce restrictions on pushing to the branch
       enforce_admins: false
@@ -97,6 +102,9 @@ branches:
 
 # Collaborators and teams
 # Note: This requires organization membership and proper team setup
+# Prerequisite: The 'maintainers' team must exist in your GitHub organization for branch protection and permissions to work.
+# To create the team, go to your organization's Teams settings and add a team named 'maintainers'.
+# If the team does not exist, branch protection rules and permissions referencing 'maintainers' will not be applied.
 teams:
   - name: maintainers
     permission: admin
