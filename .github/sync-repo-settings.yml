@@ -173,7 +173,9 @@ jobs:
           # Get number of labels in settings.yml
           LABEL_COUNT=$(yq e '.labels | length' .github/settings.yml)
           # Validate LABEL_COUNT is a positive integer, else set to 0
-          [[ "$LABEL_COUNT" =~ ^[0-9]+$ ]] || LABEL_COUNT=0
+          case "$LABEL_COUNT" in
+            ''|*[!0-9]*) LABEL_COUNT=0 ;;
+          esac
 
           if [ "$LABEL_COUNT" -gt 0 ]; then
             for i in $(seq 0 $((LABEL_COUNT - 1))); do
