@@ -167,7 +167,7 @@ jobs:
 
           # Apply branch protection via API
           gh api -X PUT "/repos/$REPO/branches/$BRANCH/protection" \
-            -f required_status_checks[strict]=$STRICT_CHECK \
+            -F required_status_checks[strict]=$STRICT_CHECK \
             -f required_status_checks[contexts]="$CONTEXTS" \
             -F enforce_admins=$ENFORCE_ADMIN \
             -F required_pull_request_reviews[dismiss_stale_reviews]=$DISMISS_STALE \

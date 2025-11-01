@@ -1,4 +1,5 @@
 #!/bin/bash
+# Note: Uses bash instead of POSIX sh due to array usage for extension list (line 20)
 set -eu
 
 # VS Code Project Template Setup Script

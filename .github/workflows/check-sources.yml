@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "devcontainer.json"
-      - "setup_template.sh"
+      - "setup-template.sh"
       - "scripts/**"
   workflow_dispatch: {}
 
@@ -73,7 +73,7 @@ jobs:
         id: shellcheck
         run: |
           set -euo pipefail
-          files=$(git ls-files -- 'scripts/**' 'initial_run.sh' || true)
+          files=$(git ls-files -- 'scripts/**' 'setup-template.sh' || true)
           if [ -z "$files" ]; then
             echo "No shell scripts to check"
             echo "shellcheck=success" >> $GITHUB_OUTPUT
@@ -91,7 +91,7 @@ jobs:
         id: shfmt
         run: |
           set -euo pipefail
-          files=$(git ls-files -- 'scripts/**' 'initial_run.sh' || true)
+          files=$(git ls-files -- 'scripts/**' 'setup-template.sh' || true)
           if [ -z "$files" ]; then
             echo "No shell scripts to format-check"
             echo "shfmt=success" >> $GITHUB_OUTPUT
