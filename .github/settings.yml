@@ -105,6 +105,9 @@ branches:
 # Prerequisite: The 'maintainers' team must exist in your GitHub organization for branch protection and permissions to work.
 # To create the team, go to your organization's Teams settings and add a team named 'maintainers'.
 # If the team does not exist, branch protection rules and permissions referencing 'maintainers' will not be applied.
+# Prerequisite: The 'maintainers' team must exist in your GitHub organization for branch protection and permissions to work.
+# To create the team, go to your organization's Teams settings and add a team named 'maintainers'.
+# If the team does not exist, branch protection rules and permissions referencing 'maintainers' will not be applied.
 teams:
   - name: maintainers
     permission: admin
