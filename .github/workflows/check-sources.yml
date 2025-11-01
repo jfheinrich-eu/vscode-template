@@ -50,13 +50,13 @@ jobs:
 
       - name: Validate devcontainer.json
         id: devcontainer_validate
-        uses: devcontainers/ci@v0
+        uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3
         with:
           validate: "true"
 
       - name: Run hadolint on Dockerfile
         id: hadolint
-        uses: hadolint/hadolint-action@v2.2.0
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
         with:
           dockerfile: Dockerfile
 
