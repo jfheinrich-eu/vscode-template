@@ -1,0 +1,28 @@
+{
+  "name": "Project Template with VS Code Config",
+  "description": "Template with optimized VS Code settings for GitHub Copilot and development best practices",
+  "version": "1.0.0",
+  "keywords": ["vscode", "copilot", "template", "best-practices"],
+  "files": [
+    ".vscode/settings.json",
+    ".vscode/extensions.json",
+    ".vscode/copilot-instructions.md",
+    ".vscode/gitmessage.txt",
+    ".eslintrc.json",
+    ".gitignore",
+    "README.md"
+  ],
+  "setup": {
+    "commands": [
+      "git config commit.template .vscode/gitmessage.txt",
+      "code --install-extension GitHub.copilot",
+      "code --install-extension GitHub.copilot-chat",
+      "code --install-extension esbenp.prettier-vscode"
+    ],
+    "notes": [
+      "Install recommended extensions when prompted",
+      "Customize copilot-instructions.md for project-specific needs",
+      "Update .gitignore for your tech stack"
+    ]
+  }
+}
