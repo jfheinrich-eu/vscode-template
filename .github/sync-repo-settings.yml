@@ -32,6 +32,9 @@ jobs:
           sudo wget -qO /usr/local/bin/yq \
             "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}"
           # Verify checksum
+          # To update the checksum for a new yq version or binary, run:
+          # wget -qO yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}" && sha256sum yq
+          # Replace the value below with the output for the correct version/binary.
           echo "99df6047f5b577a9d25f969f7c3823ada3488de2e2115b30a0abb10d9324fd9f  /usr/local/bin/yq" | \
             sudo sha256sum -c -
           sudo chmod +x /usr/local/bin/yq
@@ -79,7 +82,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          set -euo pipefail
+          set -eu
 
           echo "🛡️ Applying branch protection"
 
@@ -150,7 +153,7 @@ jobs:
             -F required_pull_request_reviews[dismiss_stale_reviews]=$DISMISS_STALE \
             -F required_pull_request_reviews[require_code_owner_reviews]=$CODE_OWNER \
             -F required_pull_request_reviews[required_approving_review_count]=$REV_COUNT \
-            -f restrictions="$RESTRICTIONS" \
+            -F restrictions="$RESTRICTIONS" \
             -F required_linear_history=$LINEAR_HIST \
             -F allow_force_pushes=$FORCE_PUSH \
             -F allow_deletions=$ALLOW_DEL \
@@ -163,12 +166,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          set -euo pipefail
+          set -eu
 
           echo "🏷️ Creating/updating labels"
 
           # Get number of labels in settings.yml
           LABEL_COUNT=$(yq e '.labels | length' .github/settings.yml)
+          # Validate LABEL_COUNT is a positive integer, else set to 0
+          case "$LABEL_COUNT" in
+            ''|*[!0-9]*) LABEL_COUNT=0 ;;
+          esac
 
           if [ "$LABEL_COUNT" -gt 0 ]; then
             for i in $(seq 0 $((LABEL_COUNT - 1))); do
