@@ -1,0 +1,543 @@
+name: Devcontainer & Scripts Security and Best Practices
+
+on:
+  pull_request:
+    paths:
+      - "devcontainer.json"
+      - "setup-template.sh"
+      - "scripts/**"
+  workflow_dispatch: {}
+
+# Minimal permissions required
+permissions:
+  contents: read
+
+env:
+  SHFMT_VERSION: "v3.12.0"
+
+concurrency:
+  group: devcontainer-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-files:
+    name: Check required files
+    runs-on: ubuntu-latest
+    outputs:
+      devcontainer_exists: ${{ steps.check-devcontainer.outputs.exists }}
+      hadolint_target_exists: ${{ steps.check-hadolint.outputs.exists }}
+      shellcheck_scripts_exists: ${{ steps.check-shellcheck.outputs.scripts_exists }}
+      shellcheck_setup_exists: ${{ steps.check-shellcheck.outputs.setup_exists }}
+      shfmt_scripts_exists: ${{ steps.check-shfmt.outputs.scripts_exists }}
+      shfmt_setup_exists: ${{ steps.check-shfmt.outputs.setup_exists }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - id: check-devcontainer
+        name: Check for .devcontainer/devcontainer.json
+        run: |
+          set -euo pipefail
+          if [ -f ".devcontainer/devcontainer.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - id: check-hadolint
+        name: Check for Dockerfile (example target for hadolint)
+        run: |
+          set -euo pipefail
+          # passe Pfad an falls dein Dockerfile an anderer Stelle liegt
+          if [ -f "Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - id: check-shellcheck
+        name: Check for shell scripts for shellcheck
+        run: |
+          set -euo pipefail
+
+          # Check for scripts in scripts/ directory
+          scripts_files=$(git ls-files -- 'scripts/**' || true)
+          if [ -n "$scripts_files" ]; then
+            echo "scripts_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "scripts_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for setup-template.sh
+          if [ -f "setup-template.sh" ]; then
+            echo "setup_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "setup_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - id: check-shfmt
+        name: Check for shell scripts for shfmt
+        run: |
+          set -euo pipefail
+
+          # Check for scripts in scripts/ directory
+          scripts_files=$(git ls-files -- 'scripts/**' || true)
+          if [ -n "$scripts_files" ]; then
+            echo "scripts_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "scripts_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for setup-template.sh
+          if [ -f "setup-template.sh" ]; then
+            echo "setup_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "setup_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+  validate-devcontainer:
+    name: Validate devcontainer, Dockerfile and scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: check-files
+    permissions:
+      checks: write
+    outputs:
+      check_run_id: ${{ steps.create_check.outputs.check_run_id }}
+      validation_result: ${{ steps.devcontainer_validate.outcome }}
+      validation_output: ${{ steps.save_output.outputs.output }}
+    if: needs.check-files.outputs.devcontainer_exists == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create a check run (marking start)
+        id: create_check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const response = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "Devcontainer & Scripts checks",
+              head_sha: context.payload.pull_request ? context.payload.pull_request.head.sha : context.sha,
+              status: "in_progress",
+              started_at: new Date().toISOString()
+            });
+            core.setOutput('check_run_id', response.data.id);
+
+      - name: Validate devcontainer.json
+        id: devcontainer_validate
+        continue-on-error: true
+        uses: devcontainers/ci@8bf61b26e9c3a98f69cb6ce2f88d24ff59b785c6 # v0.3
+        with:
+          runCmd: echo "Devcontainer validation successful"
+
+      - name: Save validation output
+        id: save_output
+        if: always()
+        run: |
+          output=""
+          if [ "${{ steps.devcontainer_validate.outcome }}" != "success" ]; then
+            output="Devcontainer validation failed. Check the job logs for details."
+          fi
+          # Escape for GitHub output
+          output="${output//'%'/'%25'}"
+          output="${output//$'\n'/'%0A'}"
+          output="${output//$'\r'/'%0D'}"
+          echo "output=$output" >> $GITHUB_OUTPUT
+
+  run-hadolint:
+    name: Run hadolint (Dockerfile linter)
+    runs-on: ubuntu-latest
+    needs: check-files
+    outputs:
+      hadolint_result: ${{ steps.hadolint.outcome }}
+      hadolint_output: ${{ steps.save_output.outputs.output }}
+    if: needs.check-files.outputs.hadolint_target_exists == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run hadolint on Dockerfile
+        id: hadolint
+        continue-on-error: true
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        with:
+          dockerfile: Dockerfile
+          format: tty
+          output-file: hadolint-output.txt
+          no-fail: true
+
+      - name: Save hadolint output
+        id: save_output
+        if: always()
+        run: |
+          output=""
+          if [ -f hadolint-output.txt ]; then
+            output=$(cat hadolint-output.txt | head -n 50)
+          elif [ "${{ steps.hadolint.outcome }}" != "success" ]; then
+            output="Hadolint check failed. Check the job logs for details."
+          fi
+          # Escape for GitHub output
+          output="${output//'%'/'%25'}"
+          output="${output//$'\n'/'%0A'}"
+          output="${output//$'\r'/'%0D'}"
+          echo "output=$output" >> $GITHUB_OUTPUT
+
+  shellcheck:
+    name: Run shellcheck
+    runs-on: ubuntu-latest
+    needs: check-files
+    if: |
+      needs.check-files.outputs.shellcheck_scripts_exists == 'true' || 
+      needs.check-files.outputs.shellcheck_setup_exists == 'true' ||
+      needs.check-files.outputs.shfmt_scripts_exists == 'true' ||
+      needs.check-files.outputs.shfmt_setup_exists == 'true'
+    outputs:
+      shellcheck_result: ${{ steps.shellcheck.outcome }}
+      shfmt_result: ${{ steps.shfmt.outcome }}
+      shellcheck_output: ${{ steps.save_shellcheck_output.outputs.output }}
+      shfmt_output: ${{ steps.save_shfmt_output.outputs.output }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck & shfmt
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y shellcheck
+          # install shfmt: use binary for reliability
+          sudo curl -fsSL "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64" -o /usr/local/bin/shfmt
+          sudo chmod +x /usr/local/bin/shfmt
+
+      - name: ShellCheck scripts
+        id: shellcheck
+        if: |
+          needs.check-files.outputs.shellcheck_scripts_exists == 'true' ||
+          needs.check-files.outputs.shellcheck_setup_exists == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          files=""
+
+          # Add scripts/** files if they exist
+          if [ "${{ needs.check-files.outputs.shellcheck_scripts_exists }}" == "true" ]; then
+            scripts_files=$(git ls-files -- 'scripts/**' || true)
+            files="$files $scripts_files"
+          fi
+
+          # Add setup-template.sh if it exists
+          if [ "${{ needs.check-files.outputs.shellcheck_setup_exists }}" == "true" ]; then
+            files="$files setup-template.sh"
+          fi
+
+          # Trim whitespace
+          files=$(echo "$files" | xargs)
+
+          if [ -z "$files" ]; then
+            echo "No shell scripts to check"
+            exit 0
+          fi
+
+          echo "Checking: $files"
+          shellcheck -x $files 2>&1 | tee shellcheck-output.txt || true
+
+          # Check exit status
+          if shellcheck -x $files; then
+            exit 0
+          else
+            exit 1
+          fi
+
+      - name: Save shellcheck output
+        id: save_shellcheck_output
+        if: always()
+        run: |
+          output=""
+          if [ -f shellcheck-output.txt ]; then
+            output=$(cat shellcheck-output.txt | head -n 100)
+          elif [ "${{ steps.shellcheck.outcome }}" == "failure" ]; then
+            output="ShellCheck found issues. Check the job logs for details."
+          fi
+          # Escape for GitHub output
+          output="${output//'%'/'%25'}"
+          output="${output//$'\n'/'%0A'}"
+          output="${output//$'\r'/'%0D'}"
+          echo "output=$output" >> $GITHUB_OUTPUT
+
+      - name: shfmt --check
+        id: shfmt
+        if: |
+          needs.check-files.outputs.shfmt_scripts_exists == 'true' ||
+          needs.check-files.outputs.shfmt_setup_exists == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          files=""
+
+          # Add scripts/** files if they exist
+          if [ "${{ needs.check-files.outputs.shfmt_scripts_exists }}" == "true" ]; then
+            scripts_files=$(git ls-files -- 'scripts/**' || true)
+            files="$files $scripts_files"
+          fi
+
+          # Add setup-template.sh if it exists
+          if [ "${{ needs.check-files.outputs.shfmt_setup_exists }}" == "true" ]; then
+            files="$files setup-template.sh"
+          fi
+
+          # Trim whitespace
+          files=$(echo "$files" | xargs)
+
+          if [ -z "$files" ]; then
+            echo "No shell scripts to format-check"
+            exit 0
+          fi
+
+          # Check formatting - shfmt exits with 1 if files need formatting
+          if ! shfmt -l -d $files 2>&1 | tee shfmt-output.txt; then
+            echo "::error::Shell scripts need formatting. Run: shfmt -w $files"
+            exit 1
+          fi
+
+      - name: Save shfmt output
+        id: save_shfmt_output
+        if: always()
+        run: |
+          output=""
+          if [ -f shfmt-output.txt ]; then
+            output=$(cat shfmt-output.txt | head -n 100)
+          elif [ "${{ steps.shfmt.outcome }}" == "failure" ]; then
+            output="shfmt found formatting issues. Run: shfmt -w <files>"
+          fi
+          # Escape for GitHub output
+          output="${output//'%'/'%25'}"
+          output="${output//$'\n'/'%0A'}"
+          output="${output//$'\r'/'%0D'}"
+          echo "output=$output" >> $GITHUB_OUTPUT
+
+  collect-results:
+    name: Collect all results
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    needs: [check-files, validate-devcontainer, run-hadolint, shellcheck]
+    if: always()
+    outputs:
+      result: ${{ steps.collect.outputs.result }}
+    steps:
+      - name: Collect results
+        id: collect
+        run: |
+          set -euo pipefail
+          STATUS="success"
+
+          # Check validation result (only if job ran)
+          if [ "${{ needs.validate-devcontainer.result }}" == "success" ]; then
+            if [ "${{ needs.validate-devcontainer.outputs.validation_result }}" != "success" ]; then 
+              STATUS="failure"
+            fi
+          elif [ "${{ needs.validate-devcontainer.result }}" == "failure" ]; then
+            STATUS="failure"
+          fi
+
+          # Check hadolint result (only if job ran)
+          if [ "${{ needs.run-hadolint.result }}" == "success" ]; then
+            if [ "${{ needs.run-hadolint.outputs.hadolint_result }}" != "success" ]; then 
+              STATUS="failure"
+            fi
+          elif [ "${{ needs.run-hadolint.result }}" == "failure" ]; then
+            STATUS="failure"
+          fi
+
+          # Check shellcheck results (only if job ran)
+          if [ "${{ needs.shellcheck.result }}" == "success" ]; then
+            if [ "${{ needs.shellcheck.outputs.shellcheck_result }}" != "success" ]; then 
+              STATUS="failure"
+            fi
+            if [ "${{ needs.shellcheck.outputs.shfmt_result }}" != "success" ]; then 
+              STATUS="failure"
+            fi
+          elif [ "${{ needs.shellcheck.result }}" == "failure" ]; then
+            STATUS="failure"
+          fi
+
+          echo "result=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Update check run (complete)
+        if: needs.validate-devcontainer.result != 'skipped'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const checkRunIdStr = '${{ needs.validate-devcontainer.outputs.check_run_id }}';
+            if (!checkRunIdStr || checkRunIdStr === '') {
+              console.log('No check run ID available to update');
+              return;
+            }
+
+            const checkRunId = parseInt(checkRunIdStr, 10);
+            if (isNaN(checkRunId) || checkRunId <= 0) {
+              console.log('Invalid check run ID: ' + checkRunIdStr);
+              return;
+            }
+
+            const conclusion = '${{ steps.collect.outputs.result }}' === 'success' ? 'success' : 'failure';
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: checkRunId,
+              completed_at: new Date().toISOString(),
+              conclusion: conclusion,
+              output: {
+                title: "Devcontainer & Scripts checks",
+                summary: `Checks finished with conclusion: ${conclusion}`,
+                text: [
+                  `devcontainer.json validation: ${{ needs.validate-devcontainer.outputs.validation_result || 'skipped' }}`,
+                  `Dockerfile hadolint: ${{ needs.run-hadolint.outputs.hadolint_result || 'skipped' }}`,
+                  `shellcheck: ${{ needs.shellcheck.outputs.shellcheck_result || 'skipped' }}`,
+                  `shfmt: ${{ needs.shellcheck.outputs.shfmt_result || 'skipped' }}`
+                ].join('\n')
+              }
+            });
+
+  annotate:
+    name: Annotate PR and ensure final status
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    needs: [validate-devcontainer, run-hadolint, shellcheck, collect-results]
+    timeout-minutes: 10
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: Post PR comment with summary (idempotent)
+        uses: actions/github-script@v7
+        env:
+          CONCLUSION: ${{ needs.collect-results.outputs.result }}
+          DEVCONTAINER_RESULT: ${{ needs.validate-devcontainer.outputs.validation_result }}
+          HADOLINT_RESULT: ${{ needs.run-hadolint.outputs.hadolint_result }}
+          SHELLCHECK_RESULT: ${{ needs.shellcheck.outputs.shellcheck_result }}
+          SHFMT_RESULT: ${{ needs.shellcheck.outputs.shfmt_result }}
+          DEVCONTAINER_OUTPUT: ${{ needs.validate-devcontainer.outputs.validation_output }}
+          HADOLINT_OUTPUT: ${{ needs.run-hadolint.outputs.hadolint_output }}
+          SHELLCHECK_OUTPUT: ${{ needs.shellcheck.outputs.shellcheck_output }}
+          SHFMT_OUTPUT: ${{ needs.shellcheck.outputs.shfmt_output }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr || !pr.number) {
+              console.log('No PR context to annotate.');
+              return;
+            }
+
+            // Get values from environment variables (safer than inline expressions)
+            const conclusion = process.env.CONCLUSION || 'failure';
+            const devcontainerResult = process.env.DEVCONTAINER_RESULT || 'skipped';
+            const hadolintResult = process.env.HADOLINT_RESULT || 'skipped';
+            const shellcheckResult = process.env.SHELLCHECK_RESULT || 'skipped';
+            const shfmtResult = process.env.SHFMT_RESULT || 'skipped';
+
+            // Decode escaped characters from outputs
+            const decodeOutput = (str) => {
+              if (!str) return '';
+              return str
+                .replace(/%25/g, '%')
+                .replace(/%0A/g, '\n')
+                .replace(/%0D/g, '\r');
+            };
+
+            const devcontainerOutput = decodeOutput(process.env.DEVCONTAINER_OUTPUT || '');
+            const hadolintOutput = decodeOutput(process.env.HADOLINT_OUTPUT || '');
+            const shellcheckOutput = decodeOutput(process.env.SHELLCHECK_OUTPUT || '');
+            const shfmtOutput = decodeOutput(process.env.SHFMT_OUTPUT || '');
+
+            // Build detailed sections
+            let detailsSections = '';
+
+            if (devcontainerResult === 'failure' && devcontainerOutput) {
+              detailsSections += '\n\n### ❌ Devcontainer Validation Issues\n\n```\n' + devcontainerOutput + '\n```';
+            }
+
+            if (hadolintResult === 'failure' && hadolintOutput) {
+              detailsSections += '\n\n### ❌ Hadolint Issues\n\n```\n' + hadolintOutput + '\n```';
+            }
+
+            if (shellcheckResult === 'failure' && shellcheckOutput) {
+              detailsSections += '\n\n### ❌ ShellCheck Issues\n\n```\n' + shellcheckOutput + '\n```';
+            }
+
+            if (shfmtResult === 'failure' && shfmtOutput) {
+              detailsSections += '\n\n### ❌ shfmt Formatting Issues\n\n```\n' + shfmtOutput + '\n```';
+            }
+
+            // Build status icons
+            const getIcon = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'skipped') return '⏭️';
+              return '❌';
+            };
+
+            const statusLine = conclusion === 'success' ? '✅ Passed' : '❌ Failed';
+
+            const bodyParts = [
+              '## Automated Devcontainer & Scripts checks',
+              '',
+              '**Overall Status: ' + statusLine + '**',
+              '',
+              '| Check | Result |',
+              '|-------|--------|',
+              '| devcontainer.json validation | ' + getIcon(devcontainerResult) + ' ' + devcontainerResult + ' |',
+              '| Dockerfile hadolint | ' + getIcon(hadolintResult) + ' ' + hadolintResult + ' |',
+              '| shellcheck | ' + getIcon(shellcheckResult) + ' ' + shellcheckResult + ' |',
+              '| shfmt | ' + getIcon(shfmtResult) + ' ' + shfmtResult + ' |'
+            ];
+
+            if (detailsSections) {
+              bodyParts.push(detailsSections);
+            }
+
+            if (conclusion !== 'success') {
+              bodyParts.push('');
+              bodyParts.push('---');
+              bodyParts.push('⚠️ Please review the details above or check the [job logs](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for complete information.');
+            }
+
+            const body = bodyParts.join('\n');
+
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number
+            });
+
+            const botComment = comments.data.find(c => 
+              c.user && 
+              c.user.type === 'Bot' && 
+              c.body && 
+              c.body.includes('Automated Devcontainer & Scripts checks')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body
+              });
+            }
+
+      - name: Fail if checks failed
+        if: needs.collect-results.outputs.result != 'success'
+        run: |
+          echo "::error::One or more checks failed. See job logs for details."
+          exit 1
