@@ -40,7 +40,7 @@ jobs:
           sudo wget -qO ./checksums_hashes_order \
             "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/checksums_hashes_order"
 
-          CHECKSUM_LINE="$(/usr/local/bin/extract_checksum.sh SHA-256 "${YQ_BINARY}" | awk '{print $2 " " /usr/local/bin/$1}')"
+          CHECKSUM_LINE="$(/usr/local/bin/extract_checksum.sh SHA-256 "${YQ_BINARY}" | awk '{print $2 " " $1}')"
           echo "CHECKSUM_LINE=${CHECKSUM_LINE}" >> $GITHUB_ENV
 
       - name: Install yq for YAML parsing
@@ -57,7 +57,7 @@ jobs:
           # To update the checksum for a new yq version or binary, run:
           # wget -qO yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}" && sha256sum yq
           # Replace the value below with the output for the correct version/binary.
-          echo "$CHECKSUM_LINE" | sudo sha256sum -c -
+          (cd /usr/local/bin 2>/dev/null && echo "$CHECKSUM_LINE") | sudo sha256sum -c -
 
           sudo chmod +x /usr/local/bin/yq
 
