@@ -53,7 +53,8 @@ branches:
         # Restrict who can dismiss pull request reviews
         dismissal_restrictions:
           users: []
-          teams: ["maintainers"]
+          teams:
+            - maintainers
 
       # Require status checks to pass before merging
       required_status_checks:
@@ -76,8 +77,10 @@ branches:
       # Restrict who can push to matching branches
       restrictions:
         users: []
-        teams: ["maintainers"]
-        apps: ["jfheinrich-bot"]
+        teams:
+          - maintainers
+        apps:
+          - jfheinrich-bot
 
       # Require linear history
       required_linear_history: false
