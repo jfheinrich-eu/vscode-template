@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  SHFMT_VERSION: "v3.10.0"
+  SHFMT_VERSION: "v3.12.0"
 
 concurrency:
   group: devcontainer-security-${{ github.ref }}
@@ -171,7 +171,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y shellcheck
           # install shfmt: use binary for reliability
-          sudo curl -fsSL "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION#v}_linux_amd64" -o /usr/local/bin/shfmt
+          sudo curl -fsSL "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64" -o /usr/local/bin/shfmt
           sudo chmod +x /usr/local/bin/shfmt
 
       - name: ShellCheck scripts
