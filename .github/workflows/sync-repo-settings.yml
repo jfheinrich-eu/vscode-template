@@ -108,6 +108,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          msg() { echo "$1"; }
+
           msg "🛡️ Applying branch protection"
 
           # Extract branch protection settings
@@ -190,6 +192,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+
+          msg() { echo "$1"; }
 
           msg "🏷️ Creating/updating labels"
 
