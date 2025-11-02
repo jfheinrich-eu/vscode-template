@@ -14,19 +14,19 @@ NC='\033[0m' # No Color
 
 # Helper functions
 info() {
-  printf "${GREEN}✅${NC} %s\n" "$1"
+	printf "${GREEN}✅${NC} %s\n" "$1"
 }
 
 warn() {
-  printf "${YELLOW}⚠️${NC}  %s\n" "$1"
+	printf "${YELLOW}⚠️${NC}  %s\n" "$1"
 }
 
 error() {
-  printf "${RED}❌${NC} %s\n" "$1"
+	printf "${RED}❌${NC} %s\n" "$1"
 }
 
 step() {
-  printf "${BLUE}▶${NC}  %s\n" "$1"
+	printf "${BLUE}▶${NC}  %s\n" "$1"
 }
 
 echo "🚀 Setting up VS Code project template..."
@@ -35,25 +35,25 @@ echo ""
 # 1. Setup git commit template
 step "Setting up git commit template..."
 if [ -f ".vscode/gitmessage.txt" ]; then
-  git config commit.template .vscode/gitmessage.txt
-  info "Git commit template configured"
+	git config commit.template .vscode/gitmessage.txt
+	info "Git commit template configured"
 else
-  warn "No git message template found"
+	warn "No git message template found"
 fi
 echo ""
 
 # 2. Install development tools (shellcheck, shfmt)
 step "Installing development tools..."
 if [ -x ".vscode/install-tools.sh" ]; then
-  info "Running .vscode/install-tools.sh..."
-  .vscode/install-tools.sh
+	info "Running .vscode/install-tools.sh..."
+	.vscode/install-tools.sh
 elif [ -f ".vscode/install-tools.sh" ]; then
-  chmod +x .vscode/install-tools.sh
-  info "Running .vscode/install-tools.sh..."
-  .vscode/install-tools.sh
+	chmod +x .vscode/install-tools.sh
+	info "Running .vscode/install-tools.sh..."
+	.vscode/install-tools.sh
 else
-  warn "Development tools installation script not found"
-  warn "Install shellcheck and shfmt manually or run: .vscode/install-tools.sh"
+	warn "Development tools installation script not found"
+	warn "Install shellcheck and shfmt manually or run: .vscode/install-tools.sh"
 fi
 echo ""
 
@@ -62,58 +62,58 @@ step "Installing essential VS Code extensions..."
 
 # Check if code command is available
 if ! command -v code >/dev/null 2>&1; then
-  warn "VS Code CLI 'code' command not found"
-  warn "Install VS Code command line tools: Cmd+Shift+P -> 'Shell Command: Install code in PATH'"
-  warn "Or manually install recommended extensions from .vscode/extensions.json"
+	warn "VS Code CLI 'code' command not found"
+	warn "Install VS Code command line tools: Cmd+Shift+P -> 'Shell Command: Install code in PATH'"
+	warn "Or manually install recommended extensions from .vscode/extensions.json"
 else
-  # Essential extensions (one per line for POSIX compatibility)
-  install_extension() {
-    ext="$1"
-    if code --list-extensions 2>/dev/null | grep -q "^${ext}$"; then
-      info "$ext already installed"
-    else
-      step "Installing $ext..."
-      if code --install-extension "$ext" >/dev/null 2>&1; then
-        info "$ext installed"
-      else
-        warn "Could not install $ext"
-      fi
-    fi
-  }
+	# Essential extensions (one per line for POSIX compatibility)
+	install_extension() {
+		ext="$1"
+		if code --list-extensions 2>/dev/null | grep -q "^${ext}$"; then
+			info "$ext already installed"
+		else
+			step "Installing $ext..."
+			if code --install-extension "$ext" >/dev/null 2>&1; then
+				info "$ext installed"
+			else
+				warn "Could not install $ext"
+			fi
+		fi
+	}
 
-  # Core extensions
-  install_extension "GitHub.copilot"
-  install_extension "GitHub.copilot-chat"
-  install_extension "esbenp.prettier-vscode"
-  install_extension "ms-python.black-formatter"
-  install_extension "redhat.vscode-yaml"
-  install_extension "streetsidesoftware.code-spell-checker"
-  install_extension "vivaxy.vscode-conventional-commits"
-  
-  # Code quality and linting
-  install_extension "dbaeumer.vscode-eslint"
-  install_extension "ms-python.python"
-  install_extension "ms-python.pylint"
-  
-  # Git support
-  install_extension "eamodio.gitlens"
-  install_extension "mhutchie.git-graph"
-  
-  # Shell scripting support (NEW)
-  install_extension "timonwong.shellcheck"
-  install_extension "foxundermoon.shell-format"
-  
-  # Additional useful extensions
-  install_extension "aaron-bond.better-comments"
-  install_extension "yzhang.markdown-all-in-one"
-  install_extension "github.vscode-github-actions"
+	# Core extensions
+	install_extension "GitHub.copilot"
+	install_extension "GitHub.copilot-chat"
+	install_extension "esbenp.prettier-vscode"
+	install_extension "ms-python.black-formatter"
+	install_extension "redhat.vscode-yaml"
+	install_extension "streetsidesoftware.code-spell-checker"
+	install_extension "vivaxy.vscode-conventional-commits"
+
+	# Code quality and linting
+	install_extension "dbaeumer.vscode-eslint"
+	install_extension "ms-python.python"
+	install_extension "ms-python.pylint"
+
+	# Git support
+	install_extension "eamodio.gitlens"
+	install_extension "mhutchie.git-graph"
+
+	# Shell scripting support (NEW)
+	install_extension "timonwong.shellcheck"
+	install_extension "foxundermoon.shell-format"
+
+	# Additional useful extensions
+	install_extension "aaron-bond.better-comments"
+	install_extension "yzhang.markdown-all-in-one"
+	install_extension "github.vscode-github-actions"
 fi
 echo ""
 
 # 4. Create project-specific files if they don't exist
 step "Setting up project files..."
 if [ ! -f "README.md" ]; then
-  cat >README.md <<'EOF'
+	cat >README.md <<'EOF'
 # Project Name
 
 ## Description
@@ -130,18 +130,18 @@ Add your project description here.
 
 See [SHELL_DEVELOPMENT.md](SHELL_DEVELOPMENT.md) for shell script development setup.
 EOF
-  info "Created basic README.md"
+	info "Created basic README.md"
 else
-  info "README.md already exists"
+	info "README.md already exists"
 fi
 
 if [ ! -f ".gitignore" ]; then
-  if [ -f ".gitignore.template" ]; then
-    cp .gitignore.template .gitignore
-    info "Created .gitignore from template"
-  else
-    # Create basic .gitignore
-    cat >.gitignore <<'EOF'
+	if [ -f ".gitignore.template" ]; then
+		cp .gitignore.template .gitignore
+		info "Created .gitignore from template"
+	else
+		# Create basic .gitignore
+		cat >.gitignore <<'EOF'
 # OS files
 .DS_Store
 Thumbs.db
@@ -178,10 +178,10 @@ dist/
 build/
 *.log
 EOF
-    info "Created basic .gitignore"
-  fi
+		info "Created basic .gitignore"
+	fi
 else
-  info ".gitignore already exists"
+	info ".gitignore already exists"
 fi
 echo ""
 
@@ -190,36 +190,36 @@ step "Verifying development tools..."
 tools_missing=0
 
 if command -v shellcheck >/dev/null 2>&1; then
-  info "shellcheck installed: $(shellcheck --version | head -n 2 | tail -n 1)"
+	info "shellcheck installed: $(shellcheck --version | head -n 2 | tail -n 1)"
 else
-  warn "shellcheck not found - install it for shell script linting"
-  tools_missing=1
+	warn "shellcheck not found - install it for shell script linting"
+	tools_missing=1
 fi
 
 if command -v shfmt >/dev/null 2>&1; then
-  info "shfmt installed: $(shfmt --version)"
+	info "shfmt installed: $(shfmt --version)"
 else
-  warn "shfmt not found - install it for shell script formatting"
-  tools_missing=1
+	warn "shfmt not found - install it for shell script formatting"
+	tools_missing=1
 fi
 
 if [ $tools_missing -eq 1 ]; then
-  warn "Run .vscode/install-tools.sh to install missing tools"
+	warn "Run .vscode/install-tools.sh to install missing tools"
 fi
 echo ""
 
 # 6. Initialize git if not already done
 step "Setting up git repository..."
 if [ ! -d ".git" ]; then
-  git init
-  info "Git repository initialized"
-  
-  # Initial commit
-  git add .
-  git commit -m "feat: initial project setup from template"
-  info "Initial commit created"
+	git init
+	info "Git repository initialized"
+
+	# Initial commit
+	git add .
+	git commit -m "feat: initial project setup from template"
+	info "Initial commit created"
 else
-  info "Git repository already initialized"
+	info "Git repository already initialized"
 fi
 echo ""
 
