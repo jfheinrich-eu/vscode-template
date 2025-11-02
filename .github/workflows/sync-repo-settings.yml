@@ -70,7 +70,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          msg() { echo "$1"; }
+          # Source common functions
+          source .github/scripts/common.sh
+
           msg "🔧 Applying repository settings"
 
           # Extract repository settings
@@ -108,7 +110,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          msg() { echo "$1"; }
+          # Source common functions
+          source .github/scripts/common.sh
 
           msg "🛡️ Applying branch protection"
 
@@ -193,7 +196,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          msg() { echo "$1"; }
+          # Source common functions
+          source .github/scripts/common.sh
 
           msg "🏷️ Creating/updating labels"
 
