@@ -414,6 +414,16 @@ jobs:
     steps:
       - name: Post PR comment with summary (idempotent)
         uses: actions/github-script@v7
+        env:
+          CONCLUSION: ${{ needs.collect-results.outputs.result }}
+          DEVCONTAINER_RESULT: ${{ needs.validate-devcontainer.outputs.validation_result }}
+          HADOLINT_RESULT: ${{ needs.run-hadolint.outputs.hadolint_result }}
+          SHELLCHECK_RESULT: ${{ needs.shellcheck.outputs.shellcheck_result }}
+          SHFMT_RESULT: ${{ needs.shellcheck.outputs.shfmt_result }}
+          DEVCONTAINER_OUTPUT: ${{ needs.validate-devcontainer.outputs.validation_output }}
+          HADOLINT_OUTPUT: ${{ needs.run-hadolint.outputs.hadolint_output }}
+          SHELLCHECK_OUTPUT: ${{ needs.shellcheck.outputs.shellcheck_output }}
+          SHFMT_OUTPUT: ${{ needs.shellcheck.outputs.shfmt_output }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -423,22 +433,14 @@ jobs:
               return;
             }
 
-            // Sanitize inputs to prevent code injection
-            const sanitize = (str) => String(str || 'skipped').replace(/[`${}]/g, '');
+            // Get values from environment variables (safer than inline expressions)
+            const conclusion = process.env.CONCLUSION || 'failure';
+            const devcontainerResult = process.env.DEVCONTAINER_RESULT || 'skipped';
+            const hadolintResult = process.env.HADOLINT_RESULT || 'skipped';
+            const shellcheckResult = process.env.SHELLCHECK_RESULT || 'skipped';
+            const shfmtResult = process.env.SHFMT_RESULT || 'skipped';
 
-            const conclusion = sanitize('${{ needs.collect-results.outputs.result }}') || 'failure';
-            const devcontainerResult = sanitize('${{ needs.validate-devcontainer.outputs.validation_result }}');
-            const hadolintResult = sanitize('${{ needs.run-hadolint.outputs.hadolint_result }}');
-            const shellcheckResult = sanitize('${{ needs.shellcheck.outputs.shellcheck_result }}');
-            const shfmtResult = sanitize('${{ needs.shellcheck.outputs.shfmt_result }}');
-
-            // Get outputs - use template syntax to safely handle potentially empty values
-            const devcontainerOutputRaw = `${{ needs.validate-devcontainer.outputs.validation_output }}`;
-            const hadolintOutputRaw = `${{ needs.run-hadolint.outputs.hadolint_output }}`;
-            const shellcheckOutputRaw = `${{ needs.shellcheck.outputs.shellcheck_output }}`;
-            const shfmtOutputRaw = `${{ needs.shellcheck.outputs.shfmt_output }}`;
-
-            // Decode escaped characters
+            // Decode escaped characters from outputs
             const decodeOutput = (str) => {
               if (!str) return '';
               return str
@@ -447,10 +449,10 @@ jobs:
                 .replace(/%0D/g, '\r');
             };
 
-            const devcontainerOutput = decodeOutput(devcontainerOutputRaw);
-            const hadolintOutput = decodeOutput(hadolintOutputRaw);
-            const shellcheckOutput = decodeOutput(shellcheckOutputRaw);
-            const shfmtOutput = decodeOutput(shfmtOutputRaw);
+            const devcontainerOutput = decodeOutput(process.env.DEVCONTAINER_OUTPUT || '');
+            const hadolintOutput = decodeOutput(process.env.HADOLINT_OUTPUT || '');
+            const shellcheckOutput = decodeOutput(process.env.SHELLCHECK_OUTPUT || '');
+            const shfmtOutput = decodeOutput(process.env.SHFMT_OUTPUT || '');
 
             // Build detailed sections
             let detailsSections = '';
@@ -471,18 +473,39 @@ jobs:
               detailsSections += '\n\n### ❌ shfmt Formatting Issues\n\n```\n' + shfmtOutput + '\n```';
             }
 
-            const body = `## Automated Devcontainer & Scripts checks
+            // Build status icons
+            const getIcon = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'skipped') return '⏭️';
+              return '❌';
+            };
 
-            **Overall Status: ${conclusion === 'success' ? '✅ Passed' : '❌ Failed'}**
+            const statusLine = conclusion === 'success' ? '✅ Passed' : '❌ Failed';
 
-            | Check | Result |
-            |-------|--------|
-            | devcontainer.json validation | ${devcontainerResult === 'success' ? '✅' : devcontainerResult === 'skipped' ? '⏭️' : '❌'} ${devcontainerResult} |
-            | Dockerfile hadolint | ${hadolintResult === 'success' ? '✅' : hadolintResult === 'skipped' ? '⏭️' : '❌'} ${hadolintResult} |
-            | shellcheck | ${shellcheckResult === 'success' ? '✅' : shellcheckResult === 'skipped' ? '⏭️' : '❌'} ${shellcheckResult} |
-            | shfmt | ${shfmtResult === 'success' ? '✅' : shfmtResult === 'skipped' ? '⏭️' : '❌'} ${shfmtResult} |
-            ${detailsSections}
-            ${conclusion !== 'success' ? '\n---\n⚠️ Please review the details above or check the [job logs](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for complete information.' : ''}`;
+            const bodyParts = [
+              '## Automated Devcontainer & Scripts checks',
+              '',
+              '**Overall Status: ' + statusLine + '**',
+              '',
+              '| Check | Result |',
+              '|-------|--------|',
+              '| devcontainer.json validation | ' + getIcon(devcontainerResult) + ' ' + devcontainerResult + ' |',
+              '| Dockerfile hadolint | ' + getIcon(hadolintResult) + ' ' + hadolintResult + ' |',
+              '| shellcheck | ' + getIcon(shellcheckResult) + ' ' + shellcheckResult + ' |',
+              '| shfmt | ' + getIcon(shfmtResult) + ' ' + shfmtResult + ' |'
+            ];
+
+            if (detailsSections) {
+              bodyParts.push(detailsSections);
+            }
+
+            if (conclusion !== 'success') {
+              bodyParts.push('');
+              bodyParts.push('---');
+              bodyParts.push('⚠️ Please review the details above or check the [job logs](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ') for complete information.');
+            }
+
+            const body = bodyParts.join('\n');
 
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
