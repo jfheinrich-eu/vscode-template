@@ -40,7 +40,7 @@ jobs:
           sudo wget -qO ./checksums_hashes_order \
             "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/checksums_hashes_order"
 
-          CHECKSUM_LINE="$(/usr/local/bin/extract_checksum.sh SHA-256 "${YQ_BINARY}" | awk '{print $2 " " $1}')"
+          CHECKSUM_LINE="$(/usr/local/bin/extract_checksum.sh SHA-256 "${YQ_BINARY}" | awk '{print $2 " " /usr/local/bin/$1}')"
           echo "CHECKSUM_LINE=${CHECKSUM_LINE}" >> $GITHUB_ENV
 
       - name: Install yq for YAML parsing
