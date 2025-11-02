@@ -113,21 +113,23 @@ echo ""
 # 4. Create project-specific files if they don't exist
 step "Setting up project files..."
 if [ ! -f "README.md" ]; then
-  echo "# Project Name" >README.md
-  echo "" >>README.md
-  echo "## Description" >>README.md
-  echo "" >>README.md
-  echo "Add your project description here." >>README.md
-  echo "" >>README.md
-  echo "## Setup" >>README.md
-  echo "" >>README.md
-  echo "1. Install dependencies" >>README.md
-  echo "2. Configure environment" >>README.md
-  echo "3. Run the application" >>README.md
-  echo "" >>README.md
-  echo "## Development" >>README.md
-  echo "" >>README.md
-  echo "See [SHELL_DEVELOPMENT.md](SHELL_DEVELOPMENT.md) for shell script development setup." >>README.md
+  cat >README.md <<'EOF'
+# Project Name
+
+## Description
+
+Add your project description here.
+
+## Setup
+
+1. Install dependencies
+2. Configure environment
+3. Run the application
+
+## Development
+
+See [SHELL_DEVELOPMENT.md](SHELL_DEVELOPMENT.md) for shell script development setup.
+EOF
   info "Created basic README.md"
 else
   info "README.md already exists"
