@@ -13,6 +13,7 @@ permissions:
   contents: write # Required for repository operations
   issues: write # Required for managing labels
   pull-requests: write # Required for some branch protection features
+  administration: write
 
 env:
   # Use PAT with 'repo' scope for full permissions, fallback to GITHUB_TOKEN
