@@ -15,7 +15,7 @@
     "javascript": true,
     "typescript": true,
     "plaintext": false,  // Disable for plain text files
-    "scminput": false   // Disable in git commit messages
+    "scminput": true   // Enable in git commit messages
   },
   
   // Copilot suggestions behavior
@@ -51,6 +51,9 @@
   // Enable Copilot Chat with custom instructions
   "github.copilot.chat.enable": true,
   "github.copilot.chat.welcomeMessage": "always",
+  
+  // Enable Copilot for commit message generation
+  "github.copilot.chat.commitMessageGeneration.enabled": true,
   
   // =============================================================================
   // Code Quality & Best Practices Enforcement
@@ -149,7 +152,12 @@
   "[shellscript]": {
     "github.copilot.enable": true,
     "editor.insertSpaces": true,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "foxundermoon.shell-format",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit"
+    }
   },
   
   // Dockerfile AI features
@@ -178,6 +186,40 @@
   // Enable problem matchers for better AI context
   "problems.decorations.enabled": true,
   "problems.showCurrentInStatus": true,
+  
+  // ShellCheck configuration
+  "shellcheck.enable": true,
+  "shellcheck.enableQuickFix": true,
+  "shellcheck.run": "onType",
+  "shellcheck.exclude": [],
+  "shellcheck.customArgs": [
+    "-x"  // Follow source statements
+  ],
+  "shellcheck.ignorePatterns": {
+    "**/*.zsh": true,
+    "**/*.zsh*": true,
+    "**/.zsh*": true
+  },
+  
+  // Shell Format (shfmt) configuration
+  "shellformat.effectLanguages": [
+    "shellscript",
+    "dockerfile",
+    "dotenv",
+    "hosts",
+    "jvmoptions",
+    "ignore",
+    "gitignore",
+    "properties",
+    "spring-boot-properties",
+    "azcli"
+  ],
+  "shellformat.flag": "-i 2 -bn -ci -sr -kp",
+  // -i 2: indent with 2 spaces
+  // -bn: binary operators at start of line
+  // -ci: switch cases indented
+  // -sr: redirect operators followed by space
+  // -kp: keep column alignment padding
   
   // Enhanced IntelliSense for better AI suggestions
   "typescript.preferences.includePackageJsonAutoImports": "auto",
@@ -247,6 +289,8 @@
   "git.alwaysSignOff": false,
   "git.useCommitInputAsStashMessage": true,
   "git.verboseCommit": true,
+  "git.enableSmartCommit": false,
+  "git.smartCommitChanges": "tracked",
   
   // Commit message templates and validation
   "git.inputValidationSubjectLength": 50,
