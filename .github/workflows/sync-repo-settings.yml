@@ -10,10 +10,15 @@ name: Sync Repository Settings
   workflow_dispatch:
 
 permissions:
-  contents: read
-  # Note: GITHUB_TOKEN automatically has admin permissions when
-  # workflow is triggered from the default branch (main)
-  # See: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+  contents: write # Required for repository operations
+  issues: write # Required for managing labels
+  pull-requests: write # Required for some branch protection features
+
+env:
+  # Use PAT with 'repo' scope for full permissions, fallback to GITHUB_TOKEN
+  # To avoid 403 errors, create a PAT and add it as repository secret 'REPO_SETTINGS_TOKEN'
+  # See: https://github.com/settings/tokens
+  GH_TOKEN: ${{ secrets.REPO_SETTINGS_TOKEN || secrets.GITHUB_TOKEN }}
 
 jobs:
   sync-settings:
@@ -61,7 +66,6 @@ jobs:
 
       - name: Apply repository settings
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -100,7 +104,6 @@ jobs:
 
       - name: Apply branch protection rules
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -184,7 +187,6 @@ jobs:
 
       - name: Create labels
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
