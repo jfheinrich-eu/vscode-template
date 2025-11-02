@@ -432,11 +432,25 @@ jobs:
             const shellcheckResult = sanitize('${{ needs.shellcheck.outputs.shellcheck_result }}');
             const shfmtResult = sanitize('${{ needs.shellcheck.outputs.shfmt_result }}');
 
-            // Get outputs (already escaped in the jobs)
-            const devcontainerOutput = '${{ needs.validate-devcontainer.outputs.validation_output }}' || '';
-            const hadolintOutput = '${{ needs.run-hadolint.outputs.hadolint_output }}' || '';
-            const shellcheckOutput = '${{ needs.shellcheck.outputs.shellcheck_output }}' || '';
-            const shfmtOutput = '${{ needs.shellcheck.outputs.shfmt_output }}' || '';
+            // Get outputs - use template syntax to safely handle potentially empty values
+            const devcontainerOutputRaw = `${{ needs.validate-devcontainer.outputs.validation_output }}`;
+            const hadolintOutputRaw = `${{ needs.run-hadolint.outputs.hadolint_output }}`;
+            const shellcheckOutputRaw = `${{ needs.shellcheck.outputs.shellcheck_output }}`;
+            const shfmtOutputRaw = `${{ needs.shellcheck.outputs.shfmt_output }}`;
+
+            // Decode escaped characters
+            const decodeOutput = (str) => {
+              if (!str) return '';
+              return str
+                .replace(/%25/g, '%')
+                .replace(/%0A/g, '\n')
+                .replace(/%0D/g, '\r');
+            };
+
+            const devcontainerOutput = decodeOutput(devcontainerOutputRaw);
+            const hadolintOutput = decodeOutput(hadolintOutputRaw);
+            const shellcheckOutput = decodeOutput(shellcheckOutputRaw);
+            const shfmtOutput = decodeOutput(shfmtOutputRaw);
 
             // Build detailed sections
             let detailsSections = '';
