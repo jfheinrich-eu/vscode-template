@@ -6,7 +6,7 @@
 repository:
   # General settings
   name: vscode-template
-  description: "VS Code template repository"
+  description: "VS Code development template with DevContainer, GitHub Copilot, shell script tools (ShellCheck/shfmt), automated CI/CD, and POSIX-compliant setup for isolated development environments"
   homepage: https://github.com/jfheinrich-eu/vscode-template
   topics:
     - docker
@@ -164,7 +164,6 @@ labels:
 
 # Milestones (optional)
 milestones: []
-
 # Rulesets (GitHub's newer alternative to branch protection)
 # Note: Requires GitHub Enterprise or specific plans
 # Uncomment and configure if available in your plan
